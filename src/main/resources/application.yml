@@ -2,9 +2,9 @@ spring:
   application:
     name: conta-conjunta-api
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   flyway:
     baseline-on-migrate: true
@@ -21,3 +21,6 @@ api:
   security:
     token:
       secret: ${JWT_SECRET}
+
+server:
+  port: ${PORT:8080}
