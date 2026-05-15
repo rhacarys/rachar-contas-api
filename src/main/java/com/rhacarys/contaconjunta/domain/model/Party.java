@@ -1,6 +1,6 @@
 package com.rhacarys.contaconjunta.domain.model;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -45,5 +45,5 @@ public class Party {
 
     @CreationTimestamp
     @Column(nullable = false, columnDefinition = "timestamp with time zone")
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 }

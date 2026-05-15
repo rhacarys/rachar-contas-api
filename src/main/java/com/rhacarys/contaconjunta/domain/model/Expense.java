@@ -1,7 +1,7 @@
 package com.rhacarys.contaconjunta.domain.model;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,13 +47,13 @@ public class Expense {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
-    @Column(nullable = false)
-    private OffsetDateTime date;
+    @Column(nullable = false, columnDefinition = "timestamp with time zone")
+    private Instant date;
 
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExpenseSplit> splits = new java.util.ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, columnDefinition = "timestamp with time zone")
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 }
