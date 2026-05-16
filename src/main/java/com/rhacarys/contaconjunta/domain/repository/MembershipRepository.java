@@ -11,4 +11,6 @@ import com.rhacarys.contaconjunta.domain.model.Membership;
 @Repository
 public interface MembershipRepository extends JpaRepository<Membership, UUID> {
     List<Membership> findByPartyId(UUID partyId);
+
+    boolean existsByPartyIdAndUserId(UUID partyId, UUID userId);
 }
