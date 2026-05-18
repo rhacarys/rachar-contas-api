@@ -58,6 +58,8 @@ public class PartyService {
                 "You cannot leave the party unless your balance is exactly zero");
 
         membershipRepository.delete(membership);
+
+        deletePartyIfEmpty(partyId);
     }
 
     @Transactional
@@ -167,6 +169,15 @@ public class PartyService {
     private Currency getCurrencyByCode(String code) {
         return currencyRepository.findByCode(code.toUpperCase())
                 .orElseThrow(() -> new BusinessException("Currency not found", HttpStatus.NOT_FOUND));
+    }
+
+    private void deletePartyIfEmpty(UUID partyId) {
+        long memberCount = membershipRepository.countByPartyId(partyId);
+
+        if (memberCount == 0) {
+            Party party = getPartyById(partyId);
+            partyRepository.delete(party);
+        }
     }
 
     private String generateUniqueCode() {
