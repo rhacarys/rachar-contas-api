@@ -15,6 +15,7 @@ import com.rhacarys.contaconjunta.api.dto.ExpenseResponse;
 import com.rhacarys.contaconjunta.domain.exception.BusinessException;
 import com.rhacarys.contaconjunta.domain.model.Expense;
 import com.rhacarys.contaconjunta.domain.model.ExpenseSplit;
+import com.rhacarys.contaconjunta.domain.model.ExpenseType;
 import com.rhacarys.contaconjunta.domain.model.Membership;
 import com.rhacarys.contaconjunta.domain.model.Party;
 import com.rhacarys.contaconjunta.domain.model.User;
@@ -40,7 +41,7 @@ public class ExpenseService {
 
         Party party = partyRepository.findById(partyId)
                 .orElseThrow(() -> new BusinessException("Party not found", HttpStatus.NOT_FOUND));
-        
+
         Membership payer = getPayer(request.payerId(), partyId);
         Map<UUID, Membership> debtorsMap = getDebtorsMap(request, partyId);
 
@@ -56,7 +57,8 @@ public class ExpenseService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (totalSplits.compareTo(request.amount()) != 0) {
-            throw new BusinessException("The sum of splits must equal the total expense amount", HttpStatus.UNPROCESSABLE_ENTITY);
+            throw new BusinessException("The sum of splits must equal the total expense amount",
+                    HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
 
@@ -78,7 +80,7 @@ public class ExpenseService {
                 .toList();
 
         List<Membership> debtors = membershipRepository.findAllByIdInAndPartyId(debtorIds, partyId);
-        
+
         if (debtors.size() != debtorIds.size()) {
             throw new BusinessException("One or more debtors do not belong to this party", HttpStatus.BAD_REQUEST);
         }
@@ -86,10 +88,12 @@ public class ExpenseService {
         return debtors.stream().collect(Collectors.toMap(Membership::getId, m -> m));
     }
 
-    private Expense buildExpenseEntity(ExpenseRequest request, Party party, Membership payer, Map<UUID, Membership> debtorsMap) {
+    private Expense buildExpenseEntity(ExpenseRequest request, Party party, Membership payer,
+            Map<UUID, Membership> debtorsMap) {
         Expense expense = new Expense();
         expense.setParty(party);
         expense.setPayer(payer);
+        expense.setType(request.type() != null ? request.type() : ExpenseType.PURCHASE);
         expense.setDescription(request.description());
         expense.setAmount(request.amount());
         expense.setDate(request.date());
@@ -98,7 +102,6 @@ public class ExpenseService {
             ExpenseSplit split = new ExpenseSplit();
             split.setDebtor(debtorsMap.get(splitReq.debtorId()));
             split.setAmount(splitReq.amount());
-            split.setSettled(false);
             expense.addSplit(split);
         }
         return expense;

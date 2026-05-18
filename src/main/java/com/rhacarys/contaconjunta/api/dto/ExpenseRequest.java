@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import com.rhacarys.contaconjunta.domain.model.ExpenseType;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +17,7 @@ public record ExpenseRequest(
         @NotNull @Positive BigDecimal amount,
         @NotNull Instant date,
         @NotNull UUID payerId,
+        ExpenseType type,
         @NotEmpty List<SplitRequest> splits) {
 
     public record SplitRequest(

@@ -38,6 +38,4 @@ public class ExpenseSplit {
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
-
-    private boolean isSettled = false;
 }

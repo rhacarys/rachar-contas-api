@@ -1,5 +1,15 @@
 package com.rhacarys.contaconjunta.domain.service;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.rhacarys.contaconjunta.api.dto.PartyBalanceResponse;
 import com.rhacarys.contaconjunta.api.dto.PartyBalanceResponse.MemberBalance;
 import com.rhacarys.contaconjunta.domain.exception.BusinessException;
@@ -9,16 +19,8 @@ import com.rhacarys.contaconjunta.domain.model.Membership;
 import com.rhacarys.contaconjunta.domain.model.User;
 import com.rhacarys.contaconjunta.domain.repository.ExpenseRepository;
 import com.rhacarys.contaconjunta.domain.repository.MembershipRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -52,13 +54,11 @@ public class BalanceService {
             Membership payer = expense.getPayer();
 
             for (ExpenseSplit split : expense.getSplits()) {
-                if (!split.isSettled()) {
-                    Membership debtor = split.getDebtor();
-                    BigDecimal amount = split.getAmount();
+                Membership debtor = split.getDebtor();
+                BigDecimal amount = split.getAmount();
 
-                    balances.merge(payer, amount, BigDecimal::add);
-                    balances.merge(debtor, amount.negate(), BigDecimal::add);
-                }
+                balances.merge(payer, amount, BigDecimal::add);
+                balances.merge(debtor, amount.negate(), BigDecimal::add);
             }
         }
         return balances;
