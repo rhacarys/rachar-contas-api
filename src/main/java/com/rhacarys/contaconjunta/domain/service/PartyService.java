@@ -38,6 +38,7 @@ public class PartyService {
         party.setDescription(request.description());
         party.setCurrency(currency);
         party.setCode(generateUniqueCode());
+
         Party savedParty = partyRepository.save(party);
 
         Membership membership = new Membership();
@@ -45,24 +46,15 @@ public class PartyService {
         membership.setUser(creator);
         membership.setAlias(creator.getName());
         membership.setRole("ADMIN");
+
         membershipRepository.save(membership);
 
-        return new PartyResponse(
-                savedParty.getId(),
-                savedParty.getCode(),
-                savedParty.getName(),
-                savedParty.getDescription(),
-                savedParty.getCurrency().getCode());
+        return PartyResponse.fromEntity(savedParty);
     }
 
     public List<PartyResponse> getUserParties(User user) {
         return partyRepository.findAllByUserId(user.getId()).stream()
-                .map(party -> new PartyResponse(
-                        party.getId(),
-                        party.getCode(),
-                        party.getName(),
-                        party.getDescription(),
-                        party.getCurrency().getCode()))
+                .map(PartyResponse::fromEntity)
                 .toList();
     }
 
@@ -83,12 +75,7 @@ public class PartyService {
 
         membershipRepository.save(membership);
 
-        return new PartyResponse(
-                party.getId(),
-                party.getCode(),
-                party.getName(),
-                party.getDescription(),
-                party.getCurrency().getCode());
+        return PartyResponse.fromEntity(party);
     }
 
     private String generateUniqueCode() {

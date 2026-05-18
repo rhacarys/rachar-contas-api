@@ -56,4 +56,9 @@ public class Expense {
     @CreationTimestamp
     @Column(nullable = false, columnDefinition = "timestamp with time zone")
     private Instant createdAt;
+
+    public void addSplit(ExpenseSplit split) {
+        splits.add(split);
+        split.setExpense(this);
+    }
 }

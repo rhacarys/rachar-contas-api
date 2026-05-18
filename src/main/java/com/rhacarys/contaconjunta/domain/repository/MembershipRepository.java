@@ -13,4 +13,6 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
     List<Membership> findByPartyId(UUID partyId);
 
     boolean existsByPartyIdAndUserId(UUID partyId, UUID userId);
+
+    List<Membership> findAllByIdInAndPartyId(List<UUID> ids, UUID partyId);
 }
