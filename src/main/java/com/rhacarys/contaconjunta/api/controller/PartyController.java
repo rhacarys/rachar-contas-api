@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -60,11 +61,28 @@ public class PartyController {
         return balanceService.calculateBalances(partyId, loggedUser);
     }
 
+    @PutMapping("/{partyId}")
+    public PartyResponse updateParty(
+            @PathVariable UUID partyId,
+            @RequestBody @Valid PartyRequest request,
+            @AuthenticationPrincipal User loggedUser) {
+        return partyService.updateParty(partyId, request, loggedUser);
+    }
+
     @DeleteMapping("/{partyId}/members/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void leaveParty(
             @PathVariable UUID partyId,
             @AuthenticationPrincipal User loggedUser) {
         partyService.leaveParty(partyId, loggedUser);
+    }
+
+    @DeleteMapping("/{partyId}/members/{membershipId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void kickMember(
+            @PathVariable UUID partyId,
+            @PathVariable UUID membershipId,
+            @AuthenticationPrincipal User loggedUser) {
+        partyService.kickMember(partyId, membershipId, loggedUser);
     }
 }
