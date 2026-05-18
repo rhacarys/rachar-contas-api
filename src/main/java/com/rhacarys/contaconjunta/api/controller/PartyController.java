@@ -23,12 +23,15 @@ import com.rhacarys.contaconjunta.domain.model.User;
 import com.rhacarys.contaconjunta.domain.service.BalanceService;
 import com.rhacarys.contaconjunta.domain.service.PartyService;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/parties")
 @RequiredArgsConstructor
+@Tag(name = "Parties", description = "Gerenciamento de grupos e despesas compartilhadas")
 public class PartyController {
 
     private final PartyService partyService;
@@ -36,6 +39,7 @@ public class PartyController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Criar novo grupo")
     public PartyResponse createParty(
             @RequestBody @Valid PartyRequest request,
             @AuthenticationPrincipal User loggedUser) {
@@ -43,11 +47,13 @@ public class PartyController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar todos os grupos do usuário")
     public List<PartyResponse> getUserParties(@AuthenticationPrincipal User loggedUser) {
         return partyService.getUserParties(loggedUser);
     }
 
     @PostMapping("/join")
+    @Operation(summary = "Entrar em um grupo existente")
     public PartyResponse joinParty(
             @RequestBody @Valid JoinPartyRequest request,
             @AuthenticationPrincipal User loggedUser) {
@@ -55,6 +61,7 @@ public class PartyController {
     }
 
     @GetMapping("/{partyId}/balances")
+    @Operation(summary = "Calcular saldo e divisão de despesas do grupo")
     public PartyBalanceResponse getPartyBalances(
             @PathVariable UUID partyId,
             @AuthenticationPrincipal User loggedUser) {
@@ -62,6 +69,7 @@ public class PartyController {
     }
 
     @PutMapping("/{partyId}")
+    @Operation(summary = "Atualizar informações do grupo")
     public PartyResponse updateParty(
             @PathVariable UUID partyId,
             @RequestBody @Valid PartyRequest request,
@@ -71,6 +79,7 @@ public class PartyController {
 
     @DeleteMapping("/{partyId}/members/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Sair de um grupo")
     public void leaveParty(
             @PathVariable UUID partyId,
             @AuthenticationPrincipal User loggedUser) {
@@ -79,6 +88,7 @@ public class PartyController {
 
     @DeleteMapping("/{partyId}/members/{membershipId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remover membro do grupo")
     public void kickMember(
             @PathVariable UUID partyId,
             @PathVariable UUID membershipId,

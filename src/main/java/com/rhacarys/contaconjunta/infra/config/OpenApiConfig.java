@@ -16,7 +16,7 @@ public class OpenApiConfig {
     OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Conta Conjunta API")
+                        .title("Rachar Contas API")
                         .version("1.0")
                         .description("API para gerenciamento de despesas compartilhadas"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))

@@ -7,18 +7,22 @@ import java.util.UUID;
 
 import com.rhacarys.contaconjunta.domain.model.Expense;
 import com.rhacarys.contaconjunta.domain.model.ExpenseType;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Informações de uma despesa registrada")
 public record ExpenseResponse(
-                UUID id,
-                String description,
-                BigDecimal amount,
-                Instant date,
-                UUID payerId,
-                ExpenseType type,
-                List<SplitResponse> splits) {
+                @Schema(description = "ID único da despesa") UUID id,
+                @Schema(description = "Descrição da despesa") String description,
+                @Schema(description = "Valor total da despesa") BigDecimal amount,
+                @Schema(description = "Data da despesa") Instant date,
+                @Schema(description = "ID do usuário que pagou") UUID payerId,
+                @Schema(description = "Tipo de despesa") ExpenseType type,
+                @Schema(description = "Como a despesa foi dividida") List<SplitResponse> splits) {
+        
+        @Schema(description = "Divisão da despesa para um membro")
         public record SplitResponse(
-                        UUID debtorId,
-                        BigDecimal amount) {
+                        @Schema(description = "ID do usuário devedor") UUID debtorId,
+                        @Schema(description = "Valor devido") BigDecimal amount) {
         }
 
         public static ExpenseResponse fromEntity(Expense expense) {

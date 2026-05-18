@@ -19,18 +19,22 @@ import com.rhacarys.contaconjunta.api.dto.ExpenseResponse;
 import com.rhacarys.contaconjunta.domain.model.User;
 import com.rhacarys.contaconjunta.domain.service.ExpenseService;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/parties/{partyId}/expenses")
 @RequiredArgsConstructor
+@Tag(name = "Expenses", description = "Gerenciamento de despesas dentro de grupos")
 public class ExpenseController {
 
     private final ExpenseService expenseService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Registrar nova despesa no grupo")
     public ExpenseResponse createExpense(
             @PathVariable UUID partyId,
             @RequestBody @Valid ExpenseRequest request,
@@ -39,6 +43,7 @@ public class ExpenseController {
     }
 
     @GetMapping
+    @Operation(summary = "Listar todas as despesas do grupo")
     public List<ExpenseResponse> getPartyExpenses(
             @PathVariable UUID partyId,
             @AuthenticationPrincipal User loggedUser) {
@@ -47,6 +52,7 @@ public class ExpenseController {
 
     @DeleteMapping("/{expenseId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Deletar uma despesa")
     public void deleteExpense(
             @PathVariable UUID partyId,
             @PathVariable UUID expenseId,
