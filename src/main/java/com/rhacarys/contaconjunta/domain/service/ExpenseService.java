@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +24,12 @@ import com.rhacarys.contaconjunta.domain.repository.MembershipRepository;
 import com.rhacarys.contaconjunta.domain.repository.PartyRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExpenseService {
-
-    private static final Logger logger = LoggerFactory.getLogger(ExpenseService.class);
 
     private final ExpenseRepository expenseRepository;
     private final PartyRepository partyRepository;
@@ -43,9 +41,9 @@ public class ExpenseService {
      */
     @Transactional
     public ExpenseResponse createExpense(UUID partyId, ExpenseRequest request, User loggedUser) {
-        logger.debug("Creating expense for partyId: {}, userId: {}, amount: {}", 
-            partyId, loggedUser.getId(), request.amount());
-        
+        log.debug("Creating expense for partyId: {}, userId: {}, amount: {}",
+                partyId, loggedUser.getId(), request.amount());
+
         validateExpenseMath(request);
         validateUserInParty(partyId, loggedUser.getId());
 
@@ -57,24 +55,24 @@ public class ExpenseService {
 
         Expense expense = buildExpenseEntity(request, party, payer, debtorsMap);
         Expense savedExpense = expenseRepository.save(expense);
-        
-        logger.info("Expense created - expenseId: {}, partyId: {}, payerId: {}, amount: {}", 
-            savedExpense.getId(), partyId, payer.getId(), request.amount());
-        
+
+        log.info("Expense created - expenseId: {}, partyId: {}, payerId: {}, amount: {}",
+                savedExpense.getId(), partyId, payer.getId(), request.amount());
+
         return ExpenseResponse.fromEntity(savedExpense);
     }
 
     @Transactional(readOnly = true)
     public List<ExpenseResponse> getPartyExpenses(UUID partyId, User loggedUser) {
-        logger.debug("Fetching expenses for partyId: {}, userId: {}", partyId, loggedUser.getId());
-        
+        log.debug("Fetching expenses for partyId: {}, userId: {}", partyId, loggedUser.getId());
+
         validateUserInParty(partyId, loggedUser.getId());
 
         List<ExpenseResponse> expenses = expenseRepository.findByPartyIdOrderByDateDesc(partyId).stream()
                 .map(ExpenseResponse::fromEntity)
                 .toList();
-        
-        logger.debug("Found {} expenses for partyId: {}", expenses.size(), partyId);
+
+        log.debug("Found {} expenses for partyId: {}", expenses.size(), partyId);
         return expenses;
     }
 
@@ -83,9 +81,9 @@ public class ExpenseService {
      */
     @Transactional
     public void deleteExpense(UUID partyId, UUID expenseId, User loggedUser) {
-        logger.debug("Deleting expense - expenseId: {}, partyId: {}, userId: {}", 
-            expenseId, partyId, loggedUser.getId());
-        
+        log.debug("Deleting expense - expenseId: {}, partyId: {}, userId: {}",
+                expenseId, partyId, loggedUser.getId());
+
         Expense expense = expenseRepository.findById(expenseId)
                 .filter(e -> e.getParty().getId().equals(partyId))
                 .orElseThrow(() -> new BusinessException("Expense not found", HttpStatus.NOT_FOUND));
@@ -97,14 +95,14 @@ public class ExpenseService {
         boolean isAdmin = "ADMIN".equals(loggedUserMembership.getRole());
 
         if (!isPayer && !isAdmin) {
-            logger.warn("Expense deletion denied - userId: {}, expenseId: {}, not payer or admin", 
-                loggedUser.getId(), expenseId);
+            log.warn("Expense deletion denied - userId: {}, expenseId: {}, not payer or admin",
+                    loggedUser.getId(), expenseId);
             throw new BusinessException("Only the payer or an ADMIN can delete this expense", HttpStatus.FORBIDDEN);
         }
 
         expenseRepository.delete(expense);
-        logger.info("Expense deleted - expenseId: {}, partyId: {}, userId: {}", 
-            expenseId, partyId, loggedUser.getId());
+        log.info("Expense deleted - expenseId: {}, partyId: {}, userId: {}",
+                expenseId, partyId, loggedUser.getId());
     }
 
     /**
@@ -117,8 +115,8 @@ public class ExpenseService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (totalSplits.compareTo(request.amount()) != 0) {
-            logger.warn("Expense validation failed - total: {}, splits total: {}", 
-                request.amount(), totalSplits);
+            log.warn("Expense validation failed - total: {}, splits total: {}",
+                    request.amount(), totalSplits);
             throw new BusinessException("The sum of splits must equal the total expense amount",
                     HttpStatus.UNPROCESSABLE_ENTITY);
         }
@@ -126,7 +124,7 @@ public class ExpenseService {
 
     private void validateUserInParty(UUID partyId, UUID userId) {
         if (!membershipRepository.existsByPartyIdAndUserId(partyId, userId)) {
-            logger.warn("User not a member of party - partyId: {}, userId: {}", partyId, userId);
+            log.warn("User not a member of party - partyId: {}, userId: {}", partyId, userId);
             throw new BusinessException("You are not a member of this party", HttpStatus.FORBIDDEN);
         }
     }
@@ -145,7 +143,7 @@ public class ExpenseService {
         List<Membership> debtors = membershipRepository.findAllByIdInAndPartyId(debtorIds, partyId);
 
         if (debtors.size() != debtorIds.size()) {
-            logger.warn("Debtors validation failed - requested: {}, found: {}", debtorIds.size(), debtors.size());
+            log.warn("Debtors validation failed - requested: {}, found: {}", debtorIds.size(), debtors.size());
             throw new BusinessException("One or more debtors do not belong to this party", HttpStatus.BAD_REQUEST);
         }
 

@@ -2,8 +2,6 @@ package com.rhacarys.contaconjunta.domain.service;
 
 import java.time.Instant;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +11,11 @@ import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.rhacarys.contaconjunta.domain.model.User;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class TokenService {
-
-    private static final Logger logger = LoggerFactory.getLogger(TokenService.class);
 
     @Value("${api.security.token.secret}")
     private String secret;
@@ -26,8 +25,8 @@ public class TokenService {
      * Token expires after 2 hours.
      */
     public String generateToken(User user) {
-        logger.debug("Generating JWT token for userId: {}", user.getId());
-        
+        log.debug("Generating JWT token for userId: {}", user.getId());
+
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             String token = JWT.create()
@@ -35,11 +34,11 @@ public class TokenService {
                     .withSubject(user.getLogin())
                     .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
-            
-            logger.debug("JWT token generated successfully for login: {}", user.getLogin());
+
+            log.debug("JWT token generated successfully for login: {}", user.getLogin());
             return token;
         } catch (JWTCreationException exception) {
-            logger.error("Error while generating JWT token for userId: {}", user.getId(), exception);
+            log.error("Error while generating JWT token for userId: {}", user.getId(), exception);
             throw new RuntimeException("Error while generating token", exception);
         }
     }
@@ -49,8 +48,8 @@ public class TokenService {
      * Returns empty string if token is invalid or expired.
      */
     public String validateToken(String token) {
-        logger.debug("Validating JWT token");
-        
+        log.debug("Validating JWT token");
+
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             String login = JWT.require(algorithm)
@@ -58,11 +57,11 @@ public class TokenService {
                     .build()
                     .verify(token)
                     .getSubject();
-            
-            logger.debug("JWT token validated successfully for login: {}", login);
+
+            log.debug("JWT token validated successfully for login: {}", login);
             return login;
         } catch (JWTVerificationException exception) {
-            logger.warn("JWT token validation failed: {}", exception.getMessage());
+            log.warn("JWT token validation failed: {}", exception.getMessage());
             return "";
         }
     }
