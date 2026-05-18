@@ -1,5 +1,6 @@
 package com.rhacarys.contaconjunta.domain.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rhacarys.contaconjunta.api.dto.JoinPartyRequest;
+import com.rhacarys.contaconjunta.api.dto.PartyBalanceResponse;
 import com.rhacarys.contaconjunta.api.dto.PartyRequest;
 import com.rhacarys.contaconjunta.api.dto.PartyResponse;
 import com.rhacarys.contaconjunta.domain.exception.BusinessException;
@@ -27,6 +29,7 @@ public class PartyService {
     private final PartyRepository partyRepository;
     private final CurrencyRepository currencyRepository;
     private final MembershipRepository membershipRepository;
+    private final BalanceService balanceService;
 
     @Transactional
     public PartyResponse createParty(PartyRequest request, User creator) {
@@ -52,12 +55,6 @@ public class PartyService {
         return PartyResponse.fromEntity(savedParty);
     }
 
-    public List<PartyResponse> getUserParties(User user) {
-        return partyRepository.findAllByUserId(user.getId()).stream()
-                .map(PartyResponse::fromEntity)
-                .toList();
-    }
-
     @Transactional
     public PartyResponse joinParty(JoinPartyRequest request, User user) {
         Party party = partyRepository.findByCode(request.code().toUpperCase())
@@ -76,6 +73,33 @@ public class PartyService {
         membershipRepository.save(membership);
 
         return PartyResponse.fromEntity(party);
+    }
+
+    @Transactional
+    public void leaveParty(UUID partyId, User user) {
+        Membership membership = membershipRepository.findByPartyIdAndUserId(partyId, user.getId())
+                .orElseThrow(() -> new BusinessException("You are not a member of this party", HttpStatus.NOT_FOUND));
+
+        var balancesResponse = balanceService.calculateBalances(partyId, user);
+
+        BigDecimal userBalance = balancesResponse.balances().stream()
+                .filter(b -> b.membershipId().equals(membership.getId()))
+                .map(PartyBalanceResponse.MemberBalance::balance)
+                .findFirst()
+                .orElse(BigDecimal.ZERO);
+
+        if (userBalance.compareTo(BigDecimal.ZERO) != 0) {
+            throw new BusinessException("You cannot leave the party unless your balance is exactly zero",
+                    HttpStatus.CONFLICT);
+        }
+
+        membershipRepository.delete(membership);
+    }
+
+    public List<PartyResponse> getUserParties(User user) {
+        return partyRepository.findAllByUserId(user.getId()).stream()
+                .map(PartyResponse::fromEntity)
+                .toList();
     }
 
     private String generateUniqueCode() {

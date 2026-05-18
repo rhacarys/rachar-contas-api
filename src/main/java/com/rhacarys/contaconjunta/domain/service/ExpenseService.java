@@ -51,6 +51,34 @@ public class ExpenseService {
         return ExpenseResponse.fromEntity(savedExpense);
     }
 
+    @Transactional(readOnly = true)
+    public List<ExpenseResponse> getPartyExpenses(UUID partyId, User loggedUser) {
+        validateUserInParty(partyId, loggedUser.getId());
+
+        return expenseRepository.findByPartyIdOrderByDateDesc(partyId).stream()
+                .map(ExpenseResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteExpense(UUID partyId, UUID expenseId, User loggedUser) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .filter(e -> e.getParty().getId().equals(partyId))
+                .orElseThrow(() -> new BusinessException("Expense not found", HttpStatus.NOT_FOUND));
+
+        Membership loggedUserMembership = membershipRepository.findByPartyIdAndUserId(partyId, loggedUser.getId())
+                .orElseThrow(() -> new BusinessException("You are not a member of this party", HttpStatus.FORBIDDEN));
+
+        boolean isPayer = expense.getPayer().getUser().getId().equals(loggedUser.getId());
+        boolean isAdmin = "ADMIN".equals(loggedUserMembership.getRole());
+
+        if (!isPayer && !isAdmin) {
+            throw new BusinessException("Only the payer or an ADMIN can delete this expense", HttpStatus.FORBIDDEN);
+        }
+
+        expenseRepository.delete(expense);
+    }
+
     private void validateExpenseMath(ExpenseRequest request) {
         BigDecimal totalSplits = request.splits().stream()
                 .map(ExpenseRequest.SplitRequest::amount)
