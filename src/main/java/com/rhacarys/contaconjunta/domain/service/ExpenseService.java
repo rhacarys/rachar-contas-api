@@ -6,12 +6,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rhacarys.contaconjunta.api.dto.ExpenseRequest;
 import com.rhacarys.contaconjunta.api.dto.ExpenseResponse;
+import com.rhacarys.contaconjunta.domain.event.ExpenseCreatedEvent;
 import com.rhacarys.contaconjunta.domain.exception.BusinessException;
 import com.rhacarys.contaconjunta.domain.model.Expense;
 import com.rhacarys.contaconjunta.domain.model.ExpenseSplit;
@@ -34,6 +36,7 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final PartyRepository partyRepository;
     private final MembershipRepository membershipRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Creates a new expense with splits across party members.
@@ -58,6 +61,8 @@ public class ExpenseService {
 
         log.info("Expense created - expenseId: {}, partyId: {}, payerId: {}, amount: {}",
                 savedExpense.getId(), partyId, payer.getId(), request.amount());
+
+        publishExpenseCreatedEvent(savedExpense);
 
         return ExpenseResponse.fromEntity(savedExpense);
     }
@@ -167,5 +172,23 @@ public class ExpenseService {
             expense.addSplit(split);
         }
         return expense;
+    }
+
+    private void publishExpenseCreatedEvent(Expense expense) {
+        List<UUID> debtorIds = expense.getSplits().stream()
+                .map(split -> split.getDebtor().getId())
+                .toList();
+
+        ExpenseCreatedEvent event = new ExpenseCreatedEvent(
+                expense.getId(),
+                expense.getParty().getId(),
+                expense.getDescription(),
+                expense.getAmount(),
+                expense.getPayer().getAlias(),
+                debtorIds
+        );
+
+        log.debug("Publishing application event for new expense: {}", expense.getId());
+        eventPublisher.publishEvent(event);
     }
 }
