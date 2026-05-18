@@ -1,5 +1,7 @@
 package com.rhacarys.contaconjunta.domain.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,13 +19,22 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+
     private final TokenService tokenService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Registers a new user with the provided credentials.
+     * Validates that login is unique before creating the account.
+     */
     @Transactional
     public void register(RegisterRequest data) {
+        logger.debug("Starting user registration for login: {}", data.login());
+        
         if (userRepository.existsByLogin(data.login())) {
+            logger.warn("Registration failed - login already exists: {}", data.login());
             throw new BusinessException("Login already exists", HttpStatus.CONFLICT);
         }
 
@@ -34,17 +45,29 @@ public class AuthService {
         newUser.setLogin(data.login());
         newUser.setPassword(encryptedPassword);
 
-        userRepository.save(newUser);
+        User savedUser = userRepository.save(newUser);
+        logger.info("User registered successfully - userId: {}, login: {}", savedUser.getId(), data.login());
     }
 
+    /**
+     * Authenticates a user with login credentials and returns a JWT token.
+     */
     public String login(LoginRequest data) {
+        logger.debug("Login attempt for login: {}", data.login());
+        
         var user = userRepository.findByLogin(data.login())
-                .orElseThrow(() -> new BusinessException("Invalid login or password", HttpStatus.UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    logger.warn("Login failed - user not found: {}", data.login());
+                    return new BusinessException("Invalid login or password", HttpStatus.UNAUTHORIZED);
+                });
 
         if (!passwordEncoder.matches(data.password(), user.getPassword())) {
+            logger.warn("Login failed - invalid password for login: {}", data.login());
             throw new BusinessException("Invalid login or password", HttpStatus.UNAUTHORIZED);
         }
 
-        return tokenService.generateToken(user);
+        String token = tokenService.generateToken(user);
+        logger.info("User login successful - userId: {}, login: {}", user.getId(), data.login());
+        return token;
     }
 }
