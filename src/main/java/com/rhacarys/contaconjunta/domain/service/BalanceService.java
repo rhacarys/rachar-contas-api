@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,26 +28,43 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BalanceService {
 
+    private static final Logger logger = LoggerFactory.getLogger(BalanceService.class);
+
     private final MembershipRepository membershipRepository;
     private final ExpenseRepository expenseRepository;
 
+    /**
+     * Calculates the balance for each member in a party based on all expenses and splits.
+     * Positive balance = user is owed money, negative = user owes money.
+     */
     @Transactional(readOnly = true)
     public PartyBalanceResponse calculateBalances(UUID partyId, User user) {
+        logger.debug("Calculating balances for partyId: {}, userId: {}", partyId, user.getId());
+        
         validateUserInParty(partyId, user.getId());
 
         List<Membership> members = membershipRepository.findByPartyId(partyId);
         List<Expense> expenses = expenseRepository.findAllByPartyIdWithSplits(partyId);
         Map<Membership, BigDecimal> balances = computeBalances(members, expenses);
 
-        return buildResponse(partyId, balances);
+        PartyBalanceResponse response = buildResponse(partyId, balances);
+        logger.debug("Balance calculation complete - partyId: {}, memberCount: {}, expenseCount: {}", 
+            partyId, members.size(), expenses.size());
+        
+        return response;
     }
 
     private void validateUserInParty(UUID partyId, UUID userId) {
         if (!membershipRepository.existsByPartyIdAndUserId(partyId, userId)) {
+            logger.warn("Balance calculation denied - userId: {}, not in partyId: {}", userId, partyId);
             throw new BusinessException("You are not a member of this party", HttpStatus.FORBIDDEN);
         }
     }
 
+    /**
+     * Iterates through all expenses and splits to compute member balances.
+     * For each expense split: payer gains the amount (positive), debtor loses it (negative).
+     */
     private Map<Membership, BigDecimal> computeBalances(List<Membership> members, List<Expense> expenses) {
         Map<Membership, BigDecimal> balances = members.stream()
                 .collect(Collectors.toMap(m -> m, m -> BigDecimal.ZERO));

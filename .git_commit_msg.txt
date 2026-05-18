@@ -1,0 +1,9 @@
+feat: Add SLF4J logging and Java documentation to service layer
+
+- Add SLF4J Logger to all service classes (AuthService, UserService, ExpenseService, BalanceService, PartyService, TokenService)
+- Add SLF4J Logger to GlobalExceptionHandler for exception tracking
+- Log at appropriate levels: DEBUG for entry/exit, INFO for successful operations, WARN for validations, ERROR for exceptions
+- Add minimal JavaDoc comments in English to complex methods explaining business logic
+- Include contextual information (userIds, partyIds, membershipIds) in log messages for traceability
+
+Co-authored-by: Copilot <copilot@github.com>
