@@ -30,7 +30,7 @@ public class TokenService {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             String token = JWT.create()
-                    .withIssuer("conta-conjunta-api")
+                    .withIssuer("rachar-contas-api")
                     .withSubject(user.getLogin())
                     .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
@@ -53,7 +53,7 @@ public class TokenService {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             String login = JWT.require(algorithm)
-                    .withIssuer("conta-conjunta-api")
+                    .withIssuer("rachar-contas-api")
                     .build()
                     .verify(token)
                     .getSubject();
