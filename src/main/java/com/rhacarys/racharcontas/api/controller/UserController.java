@@ -3,6 +3,7 @@ package com.rhacarys.racharcontas.api.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,8 +15,8 @@ import com.rhacarys.racharcontas.api.dto.UserUpdateRequest;
 import com.rhacarys.racharcontas.domain.model.User;
 import com.rhacarys.racharcontas.domain.service.UserService;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +27,12 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService userService;
+
+    @GetMapping
+    @Operation(summary = "Obter perfil do usuário autenticado")
+    public UserResponse getMe(@AuthenticationPrincipal User loggedUser) {
+        return UserResponse.fromEntity(loggedUser);
+    }
 
     @PutMapping
     @Operation(summary = "Atualizar perfil do usuário")
