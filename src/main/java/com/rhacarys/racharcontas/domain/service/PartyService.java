@@ -14,10 +14,13 @@ import com.rhacarys.racharcontas.api.dto.PartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyResponse;
 import com.rhacarys.racharcontas.domain.exception.BusinessException;
 import com.rhacarys.racharcontas.domain.model.Currency;
+import com.rhacarys.racharcontas.domain.model.Expense;
+import com.rhacarys.racharcontas.domain.model.ExpenseSplit;
 import com.rhacarys.racharcontas.domain.model.Membership;
 import com.rhacarys.racharcontas.domain.model.Party;
 import com.rhacarys.racharcontas.domain.model.User;
 import com.rhacarys.racharcontas.domain.repository.CurrencyRepository;
+import com.rhacarys.racharcontas.domain.repository.ExpenseRepository;
 import com.rhacarys.racharcontas.domain.repository.MembershipRepository;
 import com.rhacarys.racharcontas.domain.repository.PartyRepository;
 
@@ -33,6 +36,7 @@ public class PartyService {
     private final CurrencyRepository currencyRepository;
     private final MembershipRepository membershipRepository;
     private final BalanceService balanceService;
+    private final ExpenseRepository expenseRepository;
 
     /**
      * Creates a new party and adds the creator as ADMIN member.
@@ -47,7 +51,7 @@ public class PartyService {
         log.info("Party created successfully - partyId: {}, code: {}, creatorId: {}",
                 party.getId(), party.getCode(), creator.getId());
 
-        return PartyResponse.fromEntity(party);
+        return PartyResponse.fromEntity(party, BigDecimal.ZERO);
     }
 
     /**
@@ -65,7 +69,7 @@ public class PartyService {
         log.info("User joined party successfully - partyId: {}, userId: {}, alias: {}",
                 party.getId(), user.getId(), request.alias());
 
-        return PartyResponse.fromEntity(party);
+        return PartyResponse.fromEntity(party, BigDecimal.ZERO);
     }
 
     /**
@@ -101,7 +105,7 @@ public class PartyService {
         Party updatedParty = partyRepository.save(party);
         log.info("Party updated - partyId: {}, newName: {}", partyId, request.name());
 
-        return PartyResponse.fromEntity(updatedParty);
+        return PartyResponse.fromEntity(updatedParty, BigDecimal.ZERO);
     }
 
     /**
@@ -125,14 +129,34 @@ public class PartyService {
     }
 
     public List<PartyResponse> getUserParties(User user) {
-        log.debug("Fetching parties for userId: {}", user.getId());
+        UUID userId = user.getId();
+        log.debug("Fetching parties with balances for userId: {}", userId);
 
-        List<PartyResponse> parties = partyRepository.findAllByUserId(user.getId()).stream()
-                .map(PartyResponse::fromEntity)
+        List<Party> parties = partyRepository.findAllByUserId(userId);
+
+        return parties.stream()
+                .map(party -> {
+                    BigDecimal balance = calculateUserBalanceForParty(party.getId(), userId);
+                    return PartyResponse.fromEntity(party, balance);
+                })
                 .toList();
+    }
 
-        log.debug("User is member of {} parties - userId: {}", parties.size(), user.getId());
-        return parties;
+    private BigDecimal calculateUserBalanceForParty(UUID partyId, UUID userId) {
+        List<Expense> expenses = expenseRepository.findAllByPartyIdWithSplits(partyId);
+
+        BigDecimal totalPaid = expenses.stream()
+                .filter(e -> e.getPayer().getId().equals(userId))
+                .map(Expense::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalOwed = expenses.stream()
+                .flatMap(e -> e.getSplits().stream())
+                .filter(split -> split.getDebtor().getId().equals(userId))
+                .map(ExpenseSplit::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return totalPaid.subtract(totalOwed);
     }
 
     private Party buildAndSaveParty(PartyRequest request) {
