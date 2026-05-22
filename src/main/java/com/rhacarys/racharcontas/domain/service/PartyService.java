@@ -143,20 +143,25 @@ public class PartyService {
     }
 
     private BigDecimal calculateUserBalanceForParty(UUID partyId, UUID userId) {
+        BigDecimal balance = BigDecimal.ZERO;
+
         List<Expense> expenses = expenseRepository.findAllByPartyIdWithSplits(partyId);
+        for (Expense expense : expenses) {
+            Membership payer = expense.getPayer();
 
-        BigDecimal totalPaid = expenses.stream()
-                .filter(e -> e.getPayer().getId().equals(userId))
-                .map(Expense::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            for (ExpenseSplit split : expense.getSplits()) {
+                Membership debtor = split.getDebtor();
+                BigDecimal amount = split.getAmount();
 
-        BigDecimal totalOwed = expenses.stream()
-                .flatMap(e -> e.getSplits().stream())
-                .filter(split -> split.getDebtor().getId().equals(userId))
-                .map(ExpenseSplit::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return totalPaid.subtract(totalOwed);
+                if (payer.getUser().getId().equals(userId)) {
+                    balance = balance.add(amount);
+                }
+                if (debtor.getUser().getId().equals(userId)) {
+                    balance = balance.add(amount.negate());
+                }
+            }
+        }
+        return balance;
     }
 
     private Party buildAndSaveParty(PartyRequest request) {
