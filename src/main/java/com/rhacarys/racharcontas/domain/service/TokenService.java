@@ -1,7 +1,5 @@
 package com.rhacarys.racharcontas.domain.service;
 
-import java.time.Instant;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,8 +19,7 @@ public class TokenService {
     private String secret;
 
     /**
-     * Generates a JWT token for the authenticated user.
-     * Token expires after 2 hours.
+     * Generates a JWT token for the authenticated user without an expiration claim.
      */
     public String generateToken(User user) {
         log.debug("Generating JWT token for userId: {}", user.getId());
@@ -32,7 +29,6 @@ public class TokenService {
             String token = JWT.create()
                     .withIssuer("rachar-contas-api")
                     .withSubject(user.getLogin())
-                    .withExpiresAt(genExpirationDate())
                     .sign(algorithm);
 
             log.debug("JWT token generated successfully for login: {}", user.getLogin());
@@ -64,12 +60,5 @@ public class TokenService {
             log.warn("JWT token validation failed: {}", exception.getMessage());
             return "";
         }
-    }
-
-    /**
-     * Generates token expiration time as current time + 2 hours (7200 seconds).
-     */
-    private Instant genExpirationDate() {
-        return Instant.now().plusSeconds(7200);
     }
 }
