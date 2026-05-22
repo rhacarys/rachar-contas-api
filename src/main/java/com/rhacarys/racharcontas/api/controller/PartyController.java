@@ -19,12 +19,13 @@ import com.rhacarys.racharcontas.api.dto.JoinPartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyBalanceResponse;
 import com.rhacarys.racharcontas.api.dto.PartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyResponse;
+import com.rhacarys.racharcontas.api.dto.UpdateAliasRequest;
 import com.rhacarys.racharcontas.domain.model.User;
 import com.rhacarys.racharcontas.domain.service.BalanceService;
 import com.rhacarys.racharcontas.domain.service.PartyService;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -94,5 +95,15 @@ public class PartyController {
             @PathVariable UUID membershipId,
             @AuthenticationPrincipal User loggedUser) {
         partyService.kickMember(partyId, membershipId, loggedUser);
+    }
+
+    @PutMapping("/{partyId}/members/me/alias")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Editar meu apelido (alias) no grupo")
+    public void updateMyAlias(
+            @PathVariable UUID partyId,
+            @RequestBody @Valid UpdateAliasRequest request,
+            @AuthenticationPrincipal User loggedUser) {
+        partyService.updateMyAlias(partyId, loggedUser, request);
     }
 }

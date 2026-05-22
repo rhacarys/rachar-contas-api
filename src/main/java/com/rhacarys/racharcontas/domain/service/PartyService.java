@@ -12,6 +12,7 @@ import com.rhacarys.racharcontas.api.dto.JoinPartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyBalanceResponse;
 import com.rhacarys.racharcontas.api.dto.PartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyResponse;
+import com.rhacarys.racharcontas.api.dto.UpdateAliasRequest;
 import com.rhacarys.racharcontas.domain.exception.BusinessException;
 import com.rhacarys.racharcontas.domain.model.Currency;
 import com.rhacarys.racharcontas.domain.model.Expense;
@@ -106,6 +107,24 @@ public class PartyService {
         log.info("Party updated - partyId: {}, newName: {}", partyId, request.name());
 
         return PartyResponse.fromEntity(updatedParty, BigDecimal.ZERO);
+    }
+
+    /**
+     * Updates the alias of the logged-in user in a specific party.
+     */
+    @Transactional
+    public void updateMyAlias(UUID partyId, User user, UpdateAliasRequest request) {
+        log.debug("Updating alias in partyId: {} for userId: {}", partyId, user.getId());
+
+        Membership membership = membershipRepository.findByPartyId(partyId).stream()
+                .filter(m -> m.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Usuário não é membro deste grupo."));
+
+        membership.setAlias(request.alias());
+        membershipRepository.save(membership);
+
+        log.debug("Alias successfully updated to '{}' for membershipId: {}", request.alias(), membership.getId());
     }
 
     /**

@@ -12,8 +12,8 @@ import com.rhacarys.racharcontas.api.dto.LoginResponse;
 import com.rhacarys.racharcontas.api.dto.RegisterRequest;
 import com.rhacarys.racharcontas.domain.service.AuthService;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -35,7 +35,6 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Fazer login e obter token JWT")
     public LoginResponse login(@RequestBody @Valid LoginRequest data) {
-        var token = authService.login(data);
-        return new LoginResponse(token);
+        return authService.login(data);
     }
 }

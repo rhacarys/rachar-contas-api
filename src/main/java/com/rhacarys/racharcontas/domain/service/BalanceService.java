@@ -89,6 +89,7 @@ public class BalanceService {
                         entry.getKey().getId(),
                         entry.getKey().getUser().getId(),
                         entry.getKey().getAlias(),
+                        entry.getKey().getRole(),
                         entry.getValue()))
                 .sorted((b1, b2) -> {
                     boolean isLogged1 = balances.keySet().stream()

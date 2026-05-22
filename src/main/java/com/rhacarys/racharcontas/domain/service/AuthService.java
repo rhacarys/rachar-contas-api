@@ -6,7 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rhacarys.racharcontas.api.dto.LoginRequest;
+import com.rhacarys.racharcontas.api.dto.LoginResponse;
 import com.rhacarys.racharcontas.api.dto.RegisterRequest;
+import com.rhacarys.racharcontas.api.dto.UserResponse;
 import com.rhacarys.racharcontas.domain.exception.BusinessException;
 import com.rhacarys.racharcontas.domain.model.User;
 import com.rhacarys.racharcontas.domain.repository.UserRepository;
@@ -50,7 +52,7 @@ public class AuthService {
     /**
      * Authenticates a user with login credentials and returns a JWT token.
      */
-    public String login(LoginRequest data) {
+    public LoginResponse login(LoginRequest data) {
         log.debug("Login attempt for login: {}", data.login());
 
         var user = userRepository.findByLogin(data.login())
@@ -66,6 +68,8 @@ public class AuthService {
 
         String token = tokenService.generateToken(user);
         log.info("User login successful - userId: {}, login: {}", user.getId(), data.login());
-        return token;
+
+        UserResponse userResponse = new UserResponse(user.getId(), user.getName(), user.getLogin());
+        return new LoginResponse(token, userResponse);
     }
 }
