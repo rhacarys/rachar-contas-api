@@ -13,6 +13,7 @@ public record PartyBalanceResponse(
     @Schema(description = "Saldo de um membro no grupo")
     public record MemberBalance(
             @Schema(description = "ID da participação do membro no grupo") UUID membershipId,
+            @Schema(description = "ID do usuário") UUID userId,
             @Schema(description = "Apelido do membro no grupo") String alias,
             @Schema(description = "Saldo positivo = deve receber, negativo = deve pagar") BigDecimal balance) {
     }

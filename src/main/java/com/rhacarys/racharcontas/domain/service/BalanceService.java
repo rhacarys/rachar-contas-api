@@ -46,7 +46,7 @@ public class BalanceService {
         List<Expense> expenses = expenseRepository.findAllByPartyIdWithSplits(partyId);
         Map<Membership, BigDecimal> balances = computeBalances(members, expenses);
 
-        PartyBalanceResponse response = buildResponse(partyId, balances);
+        PartyBalanceResponse response = buildResponse(partyId, balances, user.getId());
         log.debug("Balance calculation complete - partyId: {}, memberCount: {}, expenseCount: {}",
                 partyId, members.size(), expenses.size());
 
@@ -83,13 +83,26 @@ public class BalanceService {
         return balances;
     }
 
-    private PartyBalanceResponse buildResponse(UUID partyId, Map<Membership, BigDecimal> balances) {
+    private PartyBalanceResponse buildResponse(UUID partyId, Map<Membership, BigDecimal> balances, UUID userId) {
         List<MemberBalance> memberBalances = balances.entrySet().stream()
                 .map(entry -> new MemberBalance(
                         entry.getKey().getId(),
+                        entry.getKey().getUser().getId(),
                         entry.getKey().getAlias(),
                         entry.getValue()))
-                .sorted((b1, b2) -> b2.balance().compareTo(b1.balance()))
+                .sorted((b1, b2) -> {
+                    boolean isLogged1 = balances.keySet().stream()
+                            .anyMatch(m -> m.getId().equals(b1.membershipId()) && m.getUser().getId().equals(userId));
+                    boolean isLogged2 = balances.keySet().stream()
+                            .anyMatch(m -> m.getId().equals(b2.membershipId()) && m.getUser().getId().equals(userId));
+
+                    if (isLogged1 && !isLogged2)
+                        return -1;
+                    if (!isLogged1 && isLogged2)
+                        return 1;
+
+                    return b2.balance().compareTo(b1.balance());
+                })
                 .toList();
 
         return new PartyBalanceResponse(partyId, memberBalances);
