@@ -1,7 +1,10 @@
 package com.rhacarys.racharcontas.domain.model;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
+
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,4 +41,11 @@ public class ExpenseSplit {
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
+
+    @Column(name = "deleted_at", columnDefinition = "timestamp with time zone")
+    private Instant deletedAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false, columnDefinition = "timestamp with time zone")
+    private Instant updatedAt;
 }

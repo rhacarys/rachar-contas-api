@@ -1,6 +1,7 @@
 package com.rhacarys.racharcontas.domain.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,7 +41,7 @@ public class PartyService {
     private final ExpenseRepository expenseRepository;
 
     /**
-     * Creates a new party and adds the creator as ADMIN member.
+     * Creates a new party and automatically assigns the creator as the ADMIN.
      */
     @Transactional
     public PartyResponse createParty(PartyRequest request, User creator) {
@@ -56,7 +57,7 @@ public class PartyService {
     }
 
     /**
-     * Allows a user to join an existing party using a unique party code.
+     * Allows a user to join an existing party using a unique invite code.
      */
     @Transactional
     public PartyResponse joinParty(JoinPartyRequest request, User user) {
@@ -74,8 +75,9 @@ public class PartyService {
     }
 
     /**
-     * Removes user from party after validating zero balance.
-     * Automatically deletes party if no members remain.
+     * Processes a user leaving a party. Requires the user to have a zero balance.
+     * Soft-deletes the membership and, if the party becomes empty, soft-deletes the
+     * party as well.
      */
     @Transactional
     public void leaveParty(UUID partyId, User user) {
@@ -85,14 +87,15 @@ public class PartyService {
         validateZeroBalance(partyId, user, membership.getId(),
                 "You cannot leave the party unless your balance is exactly zero");
 
-        membershipRepository.delete(membership);
+        membership.setDeletedAt(Instant.now());
+        membershipRepository.save(membership);
         deletePartyIfEmpty(partyId);
 
         log.info("User left party - partyId: {}, userId: {}", partyId, user.getId());
     }
 
     /**
-     * Updates party details. Only party admins can perform this action.
+     * Updates party details. Restricted to ADMIN members.
      */
     @Transactional
     public PartyResponse updateParty(UUID partyId, PartyRequest request, User loggedUser) {
@@ -110,7 +113,7 @@ public class PartyService {
     }
 
     /**
-     * Updates the alias of the logged-in user in a specific party.
+     * Updates the alias of the requesting user within a specific party.
      */
     @Transactional
     public void updateMyAlias(UUID partyId, User user, UpdateAliasRequest request) {
@@ -128,8 +131,8 @@ public class PartyService {
     }
 
     /**
-     * Removes a member from the party. Only admins can kick members.
-     * Target member must have zero balance before removal.
+     * Soft-deletes a member from a party. Restricted to ADMINs and requires
+     * the target member to have a zero balance.
      */
     @Transactional
     public void kickMember(UUID partyId, UUID membershipIdToKick, User loggedUser) {
@@ -142,11 +145,16 @@ public class PartyService {
         validateZeroBalance(partyId, loggedUser, membershipIdToKick,
                 "Cannot remove member unless their balance is exactly zero");
 
-        membershipRepository.delete(memberToKick);
+        memberToKick.setDeletedAt(Instant.now());
+        membershipRepository.save(memberToKick);
         log.info("Member kicked from party - partyId: {}, membershipId: {}, kickedBy: {}",
                 partyId, membershipIdToKick, loggedUser.getId());
     }
 
+    /**
+     * Retrieves all active parties for a given user along with their calculated
+     * balance in each.
+     */
     public List<PartyResponse> getUserParties(User user) {
         UUID userId = user.getId();
         log.debug("Fetching parties with balances for userId: {}", userId);
@@ -216,11 +224,6 @@ public class PartyService {
                 party.getId(), user.getId(), role);
     }
 
-    /**
-     * Validates that target member has exactly zero balance before allowing
-     * removal.
-     * Ensures no debts are left unresolved when user leaves or is removed.
-     */
     private void validateZeroBalance(UUID partyId, User loggedUser, UUID targetMembershipId, String errorMessage) {
         PartyBalanceResponse balancesResponse = balanceService.calculateBalances(partyId, loggedUser);
 
@@ -235,9 +238,6 @@ public class PartyService {
         }
     }
 
-    /**
-     * Validates that the user has ADMIN role in the party.
-     */
     private void validateAdminRole(UUID partyId, UUID userId) {
         Membership membership = getMembership(partyId, userId);
         if (!"ADMIN".equals(membership.getRole())) {
@@ -284,8 +284,9 @@ public class PartyService {
 
         if (memberCount == 0) {
             Party party = getPartyById(partyId);
-            partyRepository.delete(party);
-            log.info("Empty party deleted - partyId: {}", partyId);
+            party.setDeletedAt(Instant.now());
+            partyRepository.save(party);
+            log.info("Empty party soft-deleted - partyId: {}", partyId);
         }
     }
 

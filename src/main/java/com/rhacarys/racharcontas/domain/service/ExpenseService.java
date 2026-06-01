@@ -1,6 +1,7 @@
 package com.rhacarys.racharcontas.domain.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,8 +40,7 @@ public class ExpenseService {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * Creates a new expense with splits across party members.
-     * Validates that split amounts match the total expense amount.
+     * Creates a new expense and validates that the split amounts equal the total.
      */
     @Transactional
     public ExpenseResponse createExpense(UUID partyId, ExpenseRequest request, User loggedUser) {
@@ -82,7 +82,7 @@ public class ExpenseService {
     }
 
     /**
-     * Deletes an expense only if the user is the payer or party admin.
+     * Soft-deletes an expense. Restricted to the original payer or a party ADMIN.
      */
     @Transactional
     public void deleteExpense(UUID partyId, UUID expenseId, User loggedUser) {
@@ -105,15 +105,13 @@ public class ExpenseService {
             throw new BusinessException("Only the payer or an ADMIN can delete this expense", HttpStatus.FORBIDDEN);
         }
 
-        expenseRepository.delete(expense);
-        log.info("Expense deleted - expenseId: {}, partyId: {}, userId: {}",
+        expense.setDeletedAt(Instant.now());
+        expenseRepository.save(expense);
+        
+        log.info("Expense soft-deleted - expenseId: {}, partyId: {}, userId: {}",
                 expenseId, partyId, loggedUser.getId());
     }
 
-    /**
-     * Validates that the sum of all splits equals the total expense amount.
-     * Throws exception if amounts do not match.
-     */
     private void validateExpenseMath(ExpenseRequest request) {
         BigDecimal totalSplits = request.splits().stream()
                 .map(ExpenseRequest.SplitRequest::amount)

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -62,6 +63,13 @@ public class Expense {
     @CreationTimestamp
     @Column(nullable = false, columnDefinition = "timestamp with time zone")
     private Instant createdAt;
+
+    @Column(name = "deleted_at", columnDefinition = "timestamp with time zone")
+    private Instant deletedAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false, columnDefinition = "timestamp with time zone")
+    private Instant updatedAt;
 
     public void addSplit(ExpenseSplit split) {
         splits.add(split);

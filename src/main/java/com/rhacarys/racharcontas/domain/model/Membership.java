@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,7 +23,10 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "memberships")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Membership {
 
@@ -48,4 +52,11 @@ public class Membership {
     @CreationTimestamp
     @Column(nullable = false, columnDefinition = "timestamp with time zone")
     private Instant joinedAt;
+
+    @Column(name = "deleted_at", columnDefinition = "timestamp with time zone")
+    private Instant deletedAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false, columnDefinition = "timestamp with time zone")
+    private Instant updatedAt;
 }
