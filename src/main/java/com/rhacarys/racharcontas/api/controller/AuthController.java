@@ -13,6 +13,7 @@ import com.rhacarys.racharcontas.api.dto.RegisterRequest;
 import com.rhacarys.racharcontas.domain.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +28,14 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
+    @SecurityRequirements()
     @Operation(summary = "Registrar novo usuário")
     public void register(@RequestBody @Valid RegisterRequest data) {
         authService.register(data);
     }
 
     @PostMapping("/login")
+    @SecurityRequirements()
     @Operation(summary = "Fazer login e obter token JWT")
     public LoginResponse login(@RequestBody @Valid LoginRequest data) {
         return authService.login(data);

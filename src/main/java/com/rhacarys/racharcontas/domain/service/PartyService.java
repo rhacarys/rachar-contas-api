@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rhacarys.racharcontas.api.dto.JoinPartyRequest;
+import com.rhacarys.racharcontas.api.dto.MembershipResponse;
 import com.rhacarys.racharcontas.api.dto.PartyBalanceResponse;
 import com.rhacarys.racharcontas.api.dto.PartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyResponse;
@@ -54,6 +55,37 @@ public class PartyService {
                 party.getId(), party.getCode(), creator.getId());
 
         return PartyResponse.fromEntity(party, BigDecimal.ZERO);
+    }
+
+    /**
+     * Get details of a specific party, including the requesting user's balance.
+     */
+    public PartyResponse getParty(UUID partyId, User loggedUser) {
+        log.debug("Fetching party details - partyId: {}, userId: {}", partyId, loggedUser.getId());
+
+        validateNotAlreadyMember(partyId, loggedUser.getId());
+        getMembership(partyId, loggedUser.getId());
+
+        Party party = getPartyById(partyId);
+        BigDecimal balance = calculateUserBalanceForParty(partyId, loggedUser.getId());
+
+        return PartyResponse.fromEntity(party, balance);
+    }
+
+    /**
+     * Lists all members of a party. Requires the requester to be a member of the
+     * party.
+     */
+    public List<MembershipResponse> getPartyMembers(UUID partyId, User loggedUser) {
+        log.debug("Fetching members - partyId: {}, requestedBy: {}", partyId, loggedUser.getId());
+
+        getMembership(partyId, loggedUser.getId());
+
+        List<Membership> memberships = membershipRepository.findByPartyId(partyId);
+
+        return memberships.stream()
+                .map(MembershipResponse::fromEntity)
+                .toList();
     }
 
     /**
