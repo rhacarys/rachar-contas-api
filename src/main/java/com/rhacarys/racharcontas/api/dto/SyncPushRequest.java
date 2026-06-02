@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Payload contendo todas as alterações feitas offline para sincronização em lote")
 public record SyncPushRequest(
-        @Schema(description = "Despesas criadas ou editadas offline") List<ExpenseSyncPayload> expensesToUpsert,
+        @Schema(description = "Despesas criadas offline") List<ExpenseSyncPayload> expensesToCreate,
         @Schema(description = "IDs de despesas deletadas offline") List<UUID> expensesToDelete) {
     public record ExpenseSyncPayload(
             UUID id,

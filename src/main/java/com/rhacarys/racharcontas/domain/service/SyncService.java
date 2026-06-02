@@ -73,10 +73,10 @@ public class SyncService {
             });
         }
 
-        if (request.expensesToUpsert() != null) {
-            request.expensesToUpsert().forEach(payload -> {
+        if (request.expensesToCreate() != null) {
+            request.expensesToCreate().forEach(payload -> {
                 try {
-                    upsertExpense(partyId, payload);
+                    insertExpense(partyId, payload);
                 } catch (Exception e) {
                     log.warn("Falha ao salvar despesa {} durante o sync: {}", payload.id(), e.getMessage());
                 }
@@ -84,28 +84,24 @@ public class SyncService {
         }
     }
 
-    private void upsertExpense(UUID partyId, SyncPushRequest.ExpenseSyncPayload payload) {
+    private void insertExpense(UUID partyId, SyncPushRequest.ExpenseSyncPayload payload) {
+        if (expenseRepository.existsById(payload.id())) {
+            log.warn("Despesa {} já existe. Edições não são permitidas na regra de negócio.", payload.id());
+            return;
+        }
+
         Membership payer = membershipRepository.findById(payload.payerId())
                 .filter(m -> m.getParty().getId().equals(partyId) && m.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException("Pagador inválido ou inativo."));
 
-        Expense expense = expenseRepository.findById(payload.id()).orElseGet(() -> {
-            Expense newExp = new Expense();
-            newExp.setId(payload.id());
-            newExp.setParty(payer.getParty());
-            return newExp;
-        });
-
+        Expense expense = new Expense();
+        expense.setId(payload.id());
+        expense.setParty(payer.getParty());
         expense.setPayer(payer);
         expense.setDescription(payload.description());
         expense.setAmount(payload.amount());
         expense.setDate(payload.date());
         expense.setType(payload.type() != null ? payload.type() : ExpenseType.PURCHASE);
-        expense.setUpdatedAt(Instant.now()); // Força a atualização do Last-Write-Wins
-
-        if (expense.getSplits() != null) {
-            expense.getSplits().clear();
-        }
 
         for (var splitReq : payload.splits()) {
             Membership debtor = membershipRepository.findById(splitReq.debtorId())

@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rhacarys.racharcontas.api.dto.JoinPartyRequest;
-import com.rhacarys.racharcontas.api.dto.MembershipResponse;
 import com.rhacarys.racharcontas.api.dto.PartyBalanceResponse;
 import com.rhacarys.racharcontas.api.dto.PartyRequest;
 import com.rhacarys.racharcontas.api.dto.PartyResponse;
@@ -60,14 +59,6 @@ public class PartyController {
             @PathVariable UUID partyId,
             @AuthenticationPrincipal User loggedUser) {
         return partyService.getParty(partyId, loggedUser);
-    }
-
-    @GetMapping("/{partyId}/members")
-    @Operation(summary = "Listar todos os membros do grupo")
-    public List<MembershipResponse> getPartyMembers(
-            @PathVariable UUID partyId,
-            @AuthenticationPrincipal User loggedUser) {
-        return partyService.getPartyMembers(partyId, loggedUser);
     }
 
     @PostMapping("/join")
