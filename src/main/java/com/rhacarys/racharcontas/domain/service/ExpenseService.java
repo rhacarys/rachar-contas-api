@@ -39,9 +39,6 @@ public class ExpenseService {
     private final MembershipRepository membershipRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    /**
-     * Creates a new expense and validates that the split amounts equal the total.
-     */
     @Transactional
     public ExpenseResponse createExpense(UUID partyId, ExpenseRequest request, User loggedUser) {
         log.debug("Creating expense for partyId: {}, userId: {}, amount: {}",
@@ -81,9 +78,6 @@ public class ExpenseService {
         return expenses;
     }
 
-    /**
-     * Soft-deletes an expense. Restricted to the original payer or a party ADMIN.
-     */
     @Transactional
     public void deleteExpense(UUID partyId, UUID expenseId, User loggedUser) {
         log.debug("Deleting expense - expenseId: {}, partyId: {}, userId: {}",
@@ -107,9 +101,36 @@ public class ExpenseService {
 
         expense.setDeletedAt(Instant.now());
         expenseRepository.save(expense);
-        
+
         log.info("Expense soft-deleted - expenseId: {}, partyId: {}, userId: {}",
                 expenseId, partyId, loggedUser.getId());
+    }
+
+    @Transactional
+    public void deleteExpensesBatch(UUID partyId, List<UUID> expenseIds, User loggedUser) {
+        if (expenseIds == null || expenseIds.isEmpty())
+            return;
+
+        Membership userMembership = membershipRepository.findByPartyIdAndUserId(partyId, loggedUser.getId())
+                .orElseThrow(() -> new BusinessException("Acesso negado.", HttpStatus.FORBIDDEN));
+
+        boolean isAdmin = "ADMIN".equals(userMembership.getRole());
+
+        List<Expense> requestedExpenses = expenseRepository.findAllById(expenseIds).stream()
+                .filter(e -> e.getParty().getId().equals(partyId))
+                .toList();
+
+        List<Expense> allowedToDelete = requestedExpenses.stream()
+                .filter(e -> isAdmin || e.getPayer().getUser().getId().equals(loggedUser.getId()))
+                .toList();
+
+        if (!allowedToDelete.isEmpty()) {
+            allowedToDelete.forEach(e -> e.setDeletedAt(Instant.now()));
+            expenseRepository.saveAll(allowedToDelete);
+
+            log.info("Batch delete executado - partyId: {}, userId: {}, excluídas: {}/{}",
+                    partyId, loggedUser.getId(), allowedToDelete.size(), requestedExpenses.size());
+        }
     }
 
     private void validateExpenseMath(ExpenseRequest request) {
@@ -183,8 +204,7 @@ public class ExpenseService {
                 expense.getDescription(),
                 expense.getAmount(),
                 expense.getPayer().getAlias(),
-                debtorIds
-        );
+                debtorIds);
 
         log.debug("Publishing application event for new expense: {}", expense.getId());
         eventPublisher.publishEvent(event);

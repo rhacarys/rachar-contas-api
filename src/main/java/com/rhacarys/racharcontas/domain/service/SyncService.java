@@ -63,14 +63,8 @@ public class SyncService {
     public void processBatchSync(UUID partyId, SyncPushRequest request, User loggedUser) {
         log.info("Processando sincronização em lote (Push) - partyId: {}, userId: {}", partyId, loggedUser.getId());
 
-        if (request.expensesToDelete() != null) {
-            request.expensesToDelete().forEach(expenseId -> {
-                try {
-                    expenseService.deleteExpense(partyId, expenseId, loggedUser);
-                } catch (Exception e) {
-                    log.warn("Ignorando falha ao deletar despesa no sync (provavelmente já excluída): {}", expenseId);
-                }
-            });
+        if (request.expensesToDelete() != null && !request.expensesToDelete().isEmpty()) {
+            expenseService.deleteExpensesBatch(partyId, request.expensesToDelete(), loggedUser);
         }
 
         if (request.expensesToCreate() != null) {
