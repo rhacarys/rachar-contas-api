@@ -7,11 +7,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import com.rhacarys.racharcontas.domain.model.Expense;
 
-@Repository
 public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
 
     @Query("SELECT e FROM Expense e WHERE e.party.id = :partyId AND e.deletedAt IS NULL ORDER BY e.date DESC")

@@ -14,10 +14,6 @@ import com.rhacarys.racharcontas.api.dto.PartyResponse;
 import com.rhacarys.racharcontas.api.dto.SyncPushRequest;
 import com.rhacarys.racharcontas.api.dto.SyncResponse;
 import com.rhacarys.racharcontas.domain.exception.BusinessException;
-import com.rhacarys.racharcontas.domain.model.Expense;
-import com.rhacarys.racharcontas.domain.model.ExpenseSplit;
-import com.rhacarys.racharcontas.domain.model.ExpenseType;
-import com.rhacarys.racharcontas.domain.model.Membership;
 import com.rhacarys.racharcontas.domain.model.User;
 import com.rhacarys.racharcontas.domain.repository.ExpenseRepository;
 import com.rhacarys.racharcontas.domain.repository.MembershipRepository;
@@ -59,7 +55,6 @@ public class SyncService {
         return new SyncResponse(partyResponse, memberships, expenses, Instant.now());
     }
 
-    @Transactional
     public void processBatchSync(UUID partyId, SyncPushRequest request, User loggedUser) {
         log.info("Processando sincronização em lote (Push) - partyId: {}, userId: {}", partyId, loggedUser.getId());
 
@@ -70,43 +65,11 @@ public class SyncService {
         if (request.expensesToCreate() != null) {
             request.expensesToCreate().forEach(payload -> {
                 try {
-                    insertExpense(partyId, payload);
+                    expenseService.insertExpenseTransactional(partyId, payload);
                 } catch (Exception e) {
                     log.warn("Falha ao salvar despesa {} durante o sync: {}", payload.id(), e.getMessage());
                 }
             });
         }
-    }
-
-    private void insertExpense(UUID partyId, SyncPushRequest.ExpenseSyncPayload payload) {
-        if (expenseRepository.existsById(payload.id())) {
-            log.warn("Despesa {} já existe. Edições não são permitidas na regra de negócio.", payload.id());
-            return;
-        }
-
-        Membership payer = membershipRepository.findById(payload.payerId())
-                .filter(m -> m.getParty().getId().equals(partyId) && m.getDeletedAt() == null)
-                .orElseThrow(() -> new BusinessException("Pagador inválido ou inativo."));
-
-        Expense expense = new Expense();
-        expense.setId(payload.id());
-        expense.setParty(payer.getParty());
-        expense.setPayer(payer);
-        expense.setDescription(payload.description());
-        expense.setAmount(payload.amount());
-        expense.setDate(payload.date());
-        expense.setType(payload.type() != null ? payload.type() : ExpenseType.PURCHASE);
-
-        for (var splitReq : payload.splits()) {
-            Membership debtor = membershipRepository.findById(splitReq.debtorId())
-                    .orElseThrow(() -> new BusinessException("Devedor não encontrado."));
-
-            ExpenseSplit split = new ExpenseSplit();
-            split.setDebtor(debtor);
-            split.setAmount(splitReq.amount());
-            expense.addSplit(split);
-        }
-
-        expenseRepository.save(expense);
     }
 }

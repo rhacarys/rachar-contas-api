@@ -10,10 +10,12 @@ import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rhacarys.racharcontas.api.dto.ExpenseRequest;
 import com.rhacarys.racharcontas.api.dto.ExpenseResponse;
+import com.rhacarys.racharcontas.api.dto.SyncPushRequest;
 import com.rhacarys.racharcontas.domain.event.ExpenseCreatedEvent;
 import com.rhacarys.racharcontas.domain.exception.BusinessException;
 import com.rhacarys.racharcontas.domain.model.Expense;
@@ -131,6 +133,39 @@ public class ExpenseService {
             log.info("Batch delete executado - partyId: {}, userId: {}, excluídas: {}/{}",
                     partyId, loggedUser.getId(), allowedToDelete.size(), requestedExpenses.size());
         }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void insertExpenseTransactional(UUID partyId, SyncPushRequest.ExpenseSyncPayload payload) {
+        if (expenseRepository.existsById(payload.id())) {
+            log.warn("Despesa {} já existe e não pode ser editada.", payload.id());
+            return;
+        }
+
+        Membership payer = membershipRepository.findById(payload.payerId())
+                .filter(m -> m.getParty().getId().equals(partyId) && m.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException("Pagador inválido ou inativo."));
+
+        Expense expense = new Expense();
+        expense.setId(payload.id());
+        expense.setParty(payer.getParty());
+        expense.setPayer(payer);
+        expense.setDescription(payload.description());
+        expense.setAmount(payload.amount());
+        expense.setDate(payload.date());
+        expense.setType(payload.type() != null ? payload.type() : ExpenseType.PURCHASE);
+
+        for (var splitReq : payload.splits()) {
+            Membership debtor = membershipRepository.findById(splitReq.debtorId())
+                    .orElseThrow(() -> new BusinessException("Devedor não encontrado."));
+
+            ExpenseSplit split = new ExpenseSplit();
+            split.setDebtor(debtor);
+            split.setAmount(splitReq.amount());
+            expense.addSplit(split);
+        }
+
+        expenseRepository.saveAndFlush(expense);
     }
 
     private void validateExpenseMath(ExpenseRequest request) {

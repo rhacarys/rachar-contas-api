@@ -8,11 +8,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import com.rhacarys.racharcontas.domain.model.Membership;
 
-@Repository
 public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 
     @Query("SELECT m FROM Membership m WHERE m.party.id = :partyId AND m.deletedAt IS NULL")
